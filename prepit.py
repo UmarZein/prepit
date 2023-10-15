@@ -8,6 +8,7 @@ HAS_PANDAS = importlib.util.find_spec('pandas')
 HAS_SKLEARN = importlib.util.find_spec('sklearn')
 HAS_LGBM = importlib.util.find_spec('lightgbm')
 HAS_TQDM = importlib.util.find_spec('tqdm')
+GPU_SUPPORT=False
 
 class Score:
     def __init__(self, score, duration):
@@ -131,22 +132,21 @@ class SomeProb(BRANCH):
         for i,f in enumerate(self.funcs):
             r+=get_name(f,prefix=prefix+type(self).__name__+f'-{i}__')# if self.selected is not None else get_record(f,False)
         return r
-        
+
 if HAS_LGBM:
     #you ought to have numpy at this point
     import numpy as np#pyright: ignore[reportMissingImports] 
     import lightgbm #pyright: ignore[reportMissingImports]
 
-    def check_gpu_support():
-        try:
-            data = np.random.rand(50, 2)
-            label = np.random.randint(2, size=50)
-            train_data = lightgbm.Dataset(data, label=label)
-            params = {'num_iterations': 1, 'device': 'gpu'}
-            lightgbm.train(params, train_set=train_data)
-            return True
-        except Exception as _:
-            return False
+    try:
+        data = np.random.rand(50, 2)
+        label = np.random.randint(2, size=50)
+        train_data = lightgbm.Dataset(data, label=label)
+        params = {'num_iterations': 1, 'device': 'gpu', 'verbose':-1,}
+        lightgbm.train(params, train_set=train_data)
+        GPU_SUPPORT=True
+    except Exception as _:
+        GPU_SUPPORT=False
 
 if HAS_PANDAS and HAS_SKLEARN:
      
@@ -177,7 +177,7 @@ if HAS_PANDAS and HAS_SKLEARN:
         if HAS_LGBM:
             from lightgbm import LGBMClassifier,LGBMRegressor #pyright: ignore[reportMissingImports]
 
-            if check_gpu_support():
+            if GPU_SUPPORT:
                 model=LGBMClassifier(device='gpu', verbose=-1) if categorical else\
                       LGBMRegressor(device='gpu', verbose=-1)
                 model2=LGBMClassifier(device='gpu', verbose=-1) if categorical else\
